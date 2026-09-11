@@ -63,7 +63,7 @@ JSON
 aws iam create-role --role-name "$ROLE" \
   --assume-role-policy-document file:///tmp/bw-trust.json >/dev/null
 aws iam put-role-policy --role-name "$ROLE" \
-  --policy-name bristol-wake --policy-document file:///tmp/bw-perms.json
+  --policy-name "$POLICY_NAME" --policy-document file:///tmp/bw-perms.json
 
 # New permissions take a few seconds to reach every part of AWS. Creating the
 # programs too quickly fails with a complaint that the role cannot be used.
@@ -72,7 +72,7 @@ sleep 15
 
 # --- the two programs ---------------------------------------------------
 make package >/dev/null
-ZIP="fileb://${here}/dist/bristol-wake.zip"
+ZIP="fileb://${here}/dist/prism-wake.zip"
 ENV="Variables={INSTANCE_ID=${INSTANCE_ID},WAKE_SECRET=${SECRET},RSTUDIO_PORT=${RSTUDIO_PORT},RSTUDIO_USER=${RSTUDIO_USER},IDLE_CPU_PERCENT=${IDLE_CPU_PERCENT},IDLE_MINUTES=${IDLE_MINUTES}}"
 
 for fn_handler in "${WEB_FN}:wake.web.lambda_handler" "${IDLE_FN}:wake.idle.lambda_handler"; do
@@ -102,13 +102,13 @@ URL=$(aws apigatewayv2 get-api --api-id "$API" --region "$REGION" \
   --query ApiEndpoint --output text)
 
 # --- the timer that checks every fifteen minutes -------------------------
-aws events put-rule --name bristol-wake-idle-check --region "$REGION" \
+aws events put-rule --name "$RULE_NAME" --region "$REGION" \
   --schedule-expression "rate(15 minutes)" >/dev/null
 aws lambda add-permission --function-name "$IDLE_FN" --region "$REGION" \
   --statement-id events-invoke --action lambda:InvokeFunction \
   --principal events.amazonaws.com \
-  --source-arn "arn:aws:events:${REGION}:${ACCOUNT}:rule/bristol-wake-idle-check" >/dev/null
-aws events put-targets --rule bristol-wake-idle-check --region "$REGION" \
+  --source-arn "arn:aws:events:${REGION}:${ACCOUNT}:rule/${RULE_NAME}" >/dev/null
+aws events put-targets --rule "$RULE_NAME" --region "$REGION" \
   --targets "Id=1,Arn=arn:aws:lambda:${REGION}:${ACCOUNT}:function:${IDLE_FN}" >/dev/null
 
 echo

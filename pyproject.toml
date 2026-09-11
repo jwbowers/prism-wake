@@ -1,5 +1,5 @@
 [project]
-name = "bristol-wake"
+name = "prism-wake"
 version = "0.1.0"
 description = "One link that wakes the research workspace, and a timer that puts it back to sleep."
 # Pinned to the Python that AWS Lambda actually runs. Testing on a newer

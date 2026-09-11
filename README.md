@@ -1,4 +1,4 @@
-# bristol-wake
+# prism-wake
 
 One web link that starts a hibernated research workspace on AWS, and a timer
 that puts it back to sleep when nobody is using it.
@@ -65,8 +65,8 @@ Everything specific to you goes in one file that is never committed. Start
 from the example:
 
 ```bash
-git clone https://github.com/jwbowers/bristol-wake
-cd bristol-wake
+git clone https://github.com/jwbowers/prism-wake
+cd prism-wake
 cp config.example.sh config.sh
 ```
 
@@ -121,8 +121,8 @@ To change the code afterwards:
 
 ```bash
 make package
-aws lambda update-function-code --function-name bristol-wake-web \
-  --region YOUR-REGION --zip-file fileb://dist/bristol-wake.zip
+aws lambda update-function-code --function-name prism-wake-web \
+  --region YOUR-REGION --zip-file fileb://dist/prism-wake.zip
 ```
 
 ## What AWS charges
@@ -254,13 +254,13 @@ all. That is what this adds.
 ## Removing it
 
 ```bash
-aws events remove-targets --rule bristol-wake-idle-check --ids 1 --region YOUR-REGION
-aws events delete-rule --name bristol-wake-idle-check --region YOUR-REGION
+aws events remove-targets --rule prism-wake-idle-check --ids 1 --region YOUR-REGION
+aws events delete-rule --name prism-wake-idle-check --region YOUR-REGION
 aws apigatewayv2 delete-api --api-id YOUR-API-ID --region YOUR-REGION
-aws lambda delete-function --function-name bristol-wake-web --region YOUR-REGION
-aws lambda delete-function --function-name bristol-wake-idle --region YOUR-REGION
-aws iam delete-role-policy --role-name bristol-wake-role --policy-name bristol-wake
-aws iam delete-role --role-name bristol-wake-role
+aws lambda delete-function --function-name prism-wake-web --region YOUR-REGION
+aws lambda delete-function --function-name prism-wake-idle --region YOUR-REGION
+aws iam delete-role-policy --role-name prism-wake-role --policy-name prism-wake
+aws iam delete-role --role-name prism-wake-role
 ```
 
 ## Licence

@@ -32,7 +32,9 @@ export IDLE_CPU_PERCENT=5
 export IDLE_MINUTES=120
 
 # What to call things in AWS. Change these if you run more than one.
-export ROLE=bristol-wake-role
-export WEB_FN=bristol-wake-web
-export IDLE_FN=bristol-wake-idle
-export API_NAME=bristol-wake
+export ROLE=prism-wake-role
+export WEB_FN=prism-wake-web
+export IDLE_FN=prism-wake-idle
+export API_NAME=prism-wake
+export POLICY_NAME=prism-wake
+export RULE_NAME=prism-wake-idle-check

@@ -16,8 +16,8 @@ package:
 	rm -rf build dist && mkdir -p build dist
 	cp -r wake build/
 	find build -name __pycache__ -type d -exec rm -rf {} +
-	cd build && zip -qr ../dist/bristol-wake.zip wake
-	@echo "dist/bristol-wake.zip"
+	cd build && zip -qr ../dist/prism-wake.zip wake
+	@echo "dist/prism-wake.zip"
 
 clean:
 	rm -rf build dist .pytest_cache
