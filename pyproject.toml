@@ -1,0 +1,18 @@
+[project]
+name = "bristol-wake"
+version = "0.1.0"
+description = "One link that wakes the research workspace, and a timer that puts it back to sleep."
+# Pinned to the Python that AWS Lambda actually runs. Testing on a newer
+# interpreter than the one the code is deployed to hides real breakage.
+requires-python = ">=3.13,<3.14"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "boto3>=1.40",
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
