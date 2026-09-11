@@ -73,7 +73,13 @@ sleep 15
 # --- the two programs ---------------------------------------------------
 make package >/dev/null
 ZIP="fileb://${here}/dist/prism-wake.zip"
-ENV="Variables={INSTANCE_ID=${INSTANCE_ID},WAKE_SECRET=${SECRET},RSTUDIO_PORT=${RSTUDIO_PORT},RSTUDIO_USER=${RSTUDIO_USER},IDLE_CPU_PERCENT=${IDLE_CPU_PERCENT},IDLE_MINUTES=${IDLE_MINUTES}}"
+# Recording the commit means you can ask AWS what is running rather than
+# rebuilding zip files and comparing fingerprints. "-dirty" appears when the
+# working tree had uncommitted changes, so the stamp can never claim the
+# deployment came from a commit that does not contain it.
+GIT_STAMP=$(git -C "$here" describe --always --dirty --abbrev=8 2>/dev/null || echo unknown)
+
+ENV="Variables={INSTANCE_ID=${INSTANCE_ID},WAKE_SECRET=${SECRET},RSTUDIO_PORT=${RSTUDIO_PORT},RSTUDIO_USER=${RSTUDIO_USER},IDLE_CPU_PERCENT=${IDLE_CPU_PERCENT},IDLE_MINUTES=${IDLE_MINUTES},GIT_COMMIT=${GIT_STAMP}}"
 
 for fn_handler in "${WEB_FN}:wake.web.lambda_handler" "${IDLE_FN}:wake.idle.lambda_handler"; do
   fn="${fn_handler%%:*}"; handler="${fn_handler##*:}"

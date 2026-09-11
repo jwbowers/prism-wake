@@ -122,10 +122,24 @@ already there.
 To change the code afterwards:
 
 ```bash
-make package
-aws lambda update-function-code --function-name prism-wake-web \
-  --region YOUR-REGION --zip-file fileb://dist/prism-wake.zip
+make deploy
 ```
+
+That runs the tests, builds the package, updates both programs, and records the
+commit it built from. It merges that record into the settings already on the
+programs rather than replacing them, because the secret from the first
+deployment is kept there and nowhere else.
+
+To ask AWS what is actually running:
+
+```bash
+aws lambda get-function-configuration --function-name prism-wake-web \
+  --region YOUR-REGION --query 'Environment.Variables.GIT_COMMIT' --output text
+```
+
+A `-dirty` on the end means that deployment was made from a working tree with
+uncommitted changes, so no commit in the history contains exactly what is
+running.
 
 ## What AWS charges
 
