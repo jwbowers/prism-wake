@@ -33,8 +33,9 @@ def window_with_one_busy_period(busy_at=11):
 # --- the quiet machine -------------------------------------------------
 
 def test_quiet_machine_is_hibernated(env):
-    """Two hours below five percent CPU is nobody working."""
-    ec2 = FakeEC2(state="running", public_ip="203.0.113.7")
+    """Two hours below five percent CPU, all of it since the last wake."""
+    ec2 = FakeEC2(state="running", public_ip="203.0.113.7",
+                  started_minutes_ago=180)
     cw = FakeCloudWatch(quiet_window())
 
     idle.handle({}, ec2=ec2, cloudwatch=cw)
@@ -43,8 +44,9 @@ def test_quiet_machine_is_hibernated(env):
 
 
 def test_hibernate_rather_than_stop(env):
-    """Same reason as the button: a stop would discard his R session."""
-    ec2 = FakeEC2(state="running", public_ip="203.0.113.7")
+    """Same reason as the button: a stop would discard the R session."""
+    ec2 = FakeEC2(state="running", public_ip="203.0.113.7",
+                  started_minutes_ago=180)
     cw = FakeCloudWatch(quiet_window())
 
     idle.handle({}, ec2=ec2, cloudwatch=cw)
@@ -92,6 +94,41 @@ def test_no_datapoints_means_do_not_hibernate(env):
     """
     ec2 = FakeEC2(state="running", public_ip="203.0.113.7")
     cw = FakeCloudWatch([])
+
+    idle.handle({}, ec2=ec2, cloudwatch=cw)
+
+    assert ec2.stop_calls == []
+
+
+def test_readings_from_before_the_last_wake_do_not_count(env):
+    """The bug that put the workspace to sleep ten minutes after a wake.
+
+    AWS keeps processor readings for a machine whether or not it is running,
+    so a two-hour query made shortly after a wake returns readings from
+    earlier in the day as well. Those were quiet, because the workspace was
+    asleep. Counting them meant a collaborator could click the link, wait a
+    minute for RStudio, start working, and be put to sleep ten minutes later.
+
+    It happened twice on 2026-09-11, at 15:56 and again at 16:11, each within
+    fifteen minutes of a wake.
+
+    Only readings taken since the workspace last started may count.
+    """
+    ec2 = FakeEC2(state="running", public_ip="203.0.113.7",
+                  started_minutes_ago=10)
+    # A full quiet window, but all of it from before this wake.
+    cw = FakeCloudWatch(quiet_window(ending_minutes_ago=15))
+
+    idle.handle({}, ec2=ec2, cloudwatch=cw)
+
+    assert ec2.stop_calls == []
+
+
+def test_a_workspace_awake_for_less_than_the_window_is_left_alone(env):
+    """Two hours of quiet cannot have happened in twenty minutes of being up."""
+    ec2 = FakeEC2(state="running", public_ip="203.0.113.7",
+                  started_minutes_ago=20)
+    cw = FakeCloudWatch(quiet_window())
 
     idle.handle({}, ec2=ec2, cloudwatch=cw)
 

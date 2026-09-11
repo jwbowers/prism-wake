@@ -10,6 +10,7 @@ refresh must not start the workspace twice.
 """
 
 import base64
+import datetime
 import urllib.parse
 
 import pytest
@@ -26,16 +27,20 @@ class FakeEC2:
     It records every call so a test can check what was asked of AWS.
     """
 
-    def __init__(self, state="stopped", public_ip=None):
+    def __init__(self, state="stopped", public_ip=None, started_minutes_ago=600):
         self.state = state
         self.public_ip = public_ip
+        # When the workspace was last started. The timer needs this to ignore
+        # processor readings taken during an earlier run.
+        self.launch_time = datetime.datetime.now(datetime.timezone.utc) - \
+            datetime.timedelta(minutes=started_minutes_ago)
         self.describe_calls = []
         self.start_calls = []
         self.stop_calls = []
 
     def describe_instances(self, InstanceIds):
         self.describe_calls.append(InstanceIds)
-        instance = {"State": {"Name": self.state}}
+        instance = {"State": {"Name": self.state}, "LaunchTime": self.launch_time}
         # A sleeping workspace has no public address at all. Reproducing that
         # absence matters, because the page must not build a link out of it.
         if self.public_ip is not None:
@@ -77,13 +82,23 @@ PERIOD_SECONDS = 300
 FULL_WINDOW = 24
 
 
-def quiet_window(n=FULL_WINDOW):
-    """A full window of CPU averages that nobody could be working through."""
-    return [{"Average": 0.3} for _ in range(n)]
+def _stamps(n, ending_minutes_ago=0):
+    """Timestamps for n readings, five minutes apart, most recent last."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    end = now - datetime.timedelta(minutes=ending_minutes_ago)
+    return [end - datetime.timedelta(seconds=PERIOD_SECONDS * (n - 1 - i))
+            for i in range(n)]
 
 
-def busy_window(n=FULL_WINDOW):
-    return [{"Average": 45.0} for _ in range(n)]
+def quiet_window(n=FULL_WINDOW, ending_minutes_ago=0):
+    """A full window of readings that nobody could be working through."""
+    return [{"Average": 0.3, "Timestamp": t}
+            for t in _stamps(n, ending_minutes_ago)]
+
+
+def busy_window(n=FULL_WINDOW, ending_minutes_ago=0):
+    return [{"Average": 45.0, "Timestamp": t}
+            for t in _stamps(n, ending_minutes_ago)]
 
 
 class ReachedTheNetwork(BaseException):

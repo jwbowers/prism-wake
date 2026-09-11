@@ -36,12 +36,27 @@ def _cloudwatch():
     return boto3.client("cloudwatch")
 
 
-def _state(ec2, instance_id):
+def _state_and_start(ec2, instance_id):
+    """Report whether the workspace is running, and when it last started.
+
+    The start time matters as much as the state. AWS keeps processor readings
+    for a machine whether or not it is running, so a query covering the last
+    two hours can return readings from earlier in the day, taken while the
+    workspace was asleep and therefore quiet. Counting those put the workspace
+    to sleep ten minutes after someone woke it.
+    """
     reservations = ec2.describe_instances(InstanceIds=[instance_id])
-    return reservations["Reservations"][0]["Instances"][0]["State"]["Name"]
+    instance = reservations["Reservations"][0]["Instances"][0]
+    return instance["State"]["Name"], instance.get("LaunchTime")
 
 
-def _cpu_averages(cloudwatch, instance_id, minutes):
+def _cpu_averages(cloudwatch, instance_id, minutes, since=None):
+    """Readings from the last `minutes`, keeping only those taken since `since`.
+
+    A reading taken before the workspace last started says nothing about
+    whether anyone is using it now, because a sleeping machine is quiet by
+    definition.
+    """
     end = datetime.now(timezone.utc)
     start = end - timedelta(minutes=minutes)
     result = cloudwatch.get_metric_statistics(
@@ -53,7 +68,11 @@ def _cpu_averages(cloudwatch, instance_id, minutes):
         Period=PERIOD_SECONDS,
         Statistics=["Average"],
     )
-    return [point["Average"] for point in result["Datapoints"]]
+    points = result["Datapoints"]
+    if since is not None:
+        points = [p for p in points
+                  if p.get("Timestamp") is not None and p["Timestamp"] >= since]
+    return [point["Average"] for point in points]
 
 
 def handle(event, ec2=None, cloudwatch=None, periods_required=None):
@@ -63,7 +82,7 @@ def handle(event, ec2=None, cloudwatch=None, periods_required=None):
         cloudwatch = _cloudwatch()
 
     instance_id = config.instance_id()
-    state = _state(ec2, instance_id)
+    state, started_at = _state_and_start(ec2, instance_id)
 
     # A workspace that is not running is either already asleep or part way
     # between the two. Putting one to sleep while it is still booting can
@@ -76,7 +95,7 @@ def handle(event, ec2=None, cloudwatch=None, periods_required=None):
     if periods_required is None:
         periods_required = (minutes * 60) // PERIOD_SECONDS
 
-    averages = _cpu_averages(cloudwatch, instance_id, minutes)
+    averages = _cpu_averages(cloudwatch, instance_id, minutes, since=started_at)
 
     # An empty or short answer is not evidence of quiet. In the first minutes
     # after a workspace wakes, AWS has recorded nothing yet, and reading that
