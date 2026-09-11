@@ -1,5 +1,7 @@
 # prism-wake
 
+[![tests](https://github.com/jwbowers/prism-wake/actions/workflows/ci.yml/badge.svg)](https://github.com/jwbowers/prism-wake/actions/workflows/ci.yml)
+
 One web link that starts a hibernated research workspace on AWS, and a timer
 that puts it back to sleep when nobody is using it.
 
@@ -221,7 +223,9 @@ make test
 ```
 
 31 tests. None of them needs AWS credentials or a network connection, and the
-suite fails loudly if a test tries to reach either. Both AWS connections are
+suite fails loudly if a test tries to reach either. The same tests run on every
+push and every pull request, along with a check that `deploy.sh` parses, passes
+shellcheck, and refuses to touch AWS when no `config.sh` is present. Both AWS connections are
 handed in as arguments, and the stand-ins in `tests/conftest.py` record every
 call, so a test can check the calls that were made and, more often, the calls
 that were not.

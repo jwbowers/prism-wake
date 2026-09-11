@@ -1,0 +1,56 @@
+name: tests
+
+# Runs on every push and every pull request. The suite needs no AWS account
+# and no network, so there is nothing to configure and no secret to hold: a
+# fork or a stranger's pull request runs exactly the same checks.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      # --locked fails if uv.lock and pyproject.toml disagree, which catches a
+      # dependency added on someone's laptop without the lock file committed.
+      # uv reads .python-version and fetches the interpreter itself, so there
+      # is no separate Python setup step.
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # One Python version on purpose. The code is pinned to the version AWS
+      # Lambda runs, and passing on any other version would say nothing about
+      # whether it works where it is deployed.
+      - name: Run the tests
+        run: uv run pytest -q
+
+      # The deployment script is the part a reader is most likely to run
+      # first, and a syntax error in it would only show up against their real
+      # AWS account.
+      - name: Check the deployment script parses
+        run: bash -n deploy.sh
+
+      # SC1091 is the note that config.sh cannot be followed. That file is
+      # deliberately absent, so the note is expected rather than a problem.
+      - name: Lint the deployment script
+        run: shellcheck -e SC1091 deploy.sh
+
+      # Running deploy.sh without a config must stop before it touches AWS.
+      # Someone who clones this and runs it straight away should get an
+      # instruction, not a half-built deployment in whatever account their
+      # credentials happen to point at.
+      - name: Deploying without a config refuses rather than proceeds
+        run: |
+          if ./deploy.sh; then
+            echo "deploy.sh ran without a config; it should have refused" >&2
+            exit 1
+          fi
+          ./deploy.sh 2>&1 | grep -q "No config.sh found"
