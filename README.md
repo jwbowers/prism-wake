@@ -230,22 +230,6 @@ handed in as arguments, and the stand-ins in `tests/conftest.py` record every
 call, so a test can check the calls that were made and, more often, the calls
 that were not.
 
-## Things that caught me out
-
-Lambda offers its own public web addresses, called function URLs, and they are
-simpler than an API Gateway. In the account this was built for, a function URL
-configured exactly as AWS documents refused every request with `403
-AccessDeniedException`, and no command-line call I could find explained why.
-The API Gateway worked immediately. If you prefer the simpler route, try it,
-but this is why the script does not.
-
-A machine that reports `running` is not a machine that can serve a web page.
-There were about twenty-five seconds between the two.
-
-Prism's channel for running commands on the machine, AWS Systems Manager, takes
-several minutes to come back after a hibernation. Nothing here depends on it,
-but do not read its absence as a broken workspace.
-
 ## Relationship to Prism
 
 The workspace this was written for was created by
